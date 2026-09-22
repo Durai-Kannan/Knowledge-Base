@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}RAG Search | Knowledge Base Hub{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-5 pb-3 border-bottom" style="border-color: var(--border-main) !important;">
+    <h1 class="page-title mb-2">Executive Intelligence Search</h1>
+    <p class="body-text text-muted mb-0">Search harvested leadership documents using FAISS semantic retrieval and Gemini API grounding.</p>
+</div>
+
+<!-- Search Form Panel -->
+<div class="saas-card p-4 p-md-5 mb-5">
+    <form method="GET" action="{% url 'search' %}" class="d-flex flex-column flex-sm-row gap-3">
+        <input type="text" name="q" value="{{ query }}" class="form-control form-input-clean flex-grow-1" placeholder="Search knowledge base using natural language..." required>
+        <button type="submit" class="btn btn-saas-primary text-nowrap px-4">
+            <i class="fa-solid fa-magnifying-glass me-1"></i> Search
+        </button>
+    </form>
+</div>
+
+{% if query %}
+    {% if llm_answer %}
+        <!-- Grounded Response Block -->
+        <div class="saas-card p-4 p-md-5 mb-5" style="border-left: 4px solid var(--accent-blue);">
+            <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom" style="border-color: var(--border-main) !important;">
+                <h2 class="card-heading mb-0">Grounded Gemini Response</h2>
+                <span class="badge bg-light text-primary border px-3 py-1.5 font-monospace fw-semibold fs-6">{{ llm_answer.model|default:"Gemini API" }}</span>
+            </div>
+
+            <div class="body-text mb-4" style="line-height: 1.8; font-size: 1.1rem;">
+                {{ llm_answer.answer|linebreaks }}
+            </div>
+
+            {% if llm_answer.sources %}
+                <div class="pt-4 border-top" style="border-color: var(--border-main) !important;">
+                    <h3 class="h6 text-muted mb-3">Attributed Source Citations:</h3>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for src in llm_answer.sources %}
+                            <a href="{{ src.url }}" target="_blank" class="chip-link">
+                                <span>{{ src.title|truncatechars:42 }}</span>
+                                <span class="badge bg-white text-success border ms-1 font-monospace">Score: {{ src.score|floatformat:2 }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Retrieved Passages Section -->
+        <div class="saas-card p-4 p-md-5">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h2 class="card-heading mb-0">Retrieved Context Passages ({{ results|length }})</h2>
+                <span class="text-caption-sm fw-medium">FAISS Cosine Similarity Ranking</span>
+            </div>
+
+            {% if results %}
+                <div class="accordion accordion-flush d-flex flex-column gap-3" id="chunksAccordion">
+                    {% for chunk in results %}
+                        <div class="accordion-item border rounded-3 overflow-hidden" style="border-color: var(--border-main) !important;">
+                            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                                <button class="accordion-button bg-white text-main collapsed py-3 px-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}">
+                                    <div class="d-flex align-items-center justify-content-between w-100 me-3">
+                                        <span class="fw-semibold body-text">
+                                            Chunk #{{ chunk.chunk_index }} from {{ chunk.title|truncatechars:40 }}
+                                        </span>
+                                        <span class="badge bg-light text-success border px-2.5 py-1.5 font-monospace fs-6 ms-2">
+                                            Similarity: {{ chunk.score|floatformat:3 }}
+                                        </span>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#chunksAccordion">
+                                <div class="accordion-body border-top p-4" style="border-color: var(--border-main) !important;">
+                                    <p class="mb-3 text-muted body-text">
+                                        <strong>Source URL:</strong> 
+                                        <a href="{{ chunk.url }}" target="_blank" class="font-monospace text-break">{{ chunk.url }}</a>
+                                    </p>
+                                    <div class="code-block body-text" style="white-space: pre-wrap; font-family: 'Inter', sans-serif;">{{ chunk.content }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted body-text mb-0">No matching vector passages found above similarity threshold.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endif %}
+{% endblock %}

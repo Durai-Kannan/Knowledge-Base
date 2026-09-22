@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload & Ingest | Knowledge Base Hub{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-5 pb-3 border-bottom gap-3" style="border-color: var(--border-main) !important;">
+    <div>
+        <h1 class="page-title mb-2">Upload & Ingest URLs</h1>
+        <p class="body-text text-muted mb-0">Upload Excel (<code>.xlsx</code>) or CSV files containing URL columns, or harvest a single URL directly.</p>
+    </div>
+    <div>
+        <a href="{% url 'documents_list' %}" class="btn btn-saas-secondary">
+            <i class="fa-solid fa-list me-1"></i> View Harvested Docs
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- File Upload Form -->
+    <div class="col-md-6">
+        <div class="saas-card p-4 p-md-5 h-100 d-flex flex-column justify-content-between">
+            <div>
+                <h2 class="card-heading mb-2">Batch File Upload (.xlsx / .csv)</h2>
+                <p class="text-muted body-text mb-4">Upload an Excel spreadsheet or CSV document containing URL columns (e.g., <code>Leadership URL.xlsx</code>).</p>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label-custom mb-2">Select Spreadsheet / Document File:</label>
+                        {{ file_form.file }}
+                        <div class="text-caption-sm mt-2">
+                            Auto-detects columns: <code>URL</code>, <code>link</code>, <code>website</code>, etc.
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-3 border mb-4" style="background-color: var(--bg-subtle); border-color: var(--border-main) !important;">
+                        <h3 class="h6 mb-2">Ingestion Pipeline Workflow</h3>
+                        <p class="text-caption-sm mb-0">Scrapes HTML, cleans content, breaks text into ~700-character passages, generates embeddings via Gemini API, and updates FAISS index.</p>
+                    </div>
+
+                    <button type="submit" name="file_submit" class="btn btn-saas-primary w-100">
+                        <i class="fa-solid fa-cloud-arrow-up me-1"></i> Upload & Start Pipeline
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Single URL Form -->
+    <div class="col-md-6">
+        <div class="saas-card p-4 p-md-5 h-100 d-flex flex-column justify-content-between">
+            <div>
+                <h2 class="card-heading mb-2">Single URL Harvest</h2>
+                <p class="text-muted body-text mb-4">Harvest an individual web page URL on demand to extract text and vector embeddings.</p>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label-custom mb-2">Target Web Page URL:</label>
+                        {{ url_form.url }}
+                    </div>
+                    
+                    <div class="p-4 rounded-3 border mb-4" style="background-color: var(--bg-subtle); border-color: var(--border-main) !important;">
+                        <h3 class="h6 mb-2">Direct Web Scraping</h3>
+                        <p class="text-caption-sm mb-0">Fetches live HTML, extracts text metadata, creates embeddings, and updates the vector database in real-time.</p>
+                    </div>
+
+                    <button type="submit" name="url_submit" class="btn btn-saas-secondary w-100">
+                        <i class="fa-solid fa-globe me-1"></i> Harvest Single URL Now
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ingestion Summary if Present -->
+{% if ingestion_results %}
+    <div class="saas-card p-4 p-md-5">
+        <h2 class="card-heading mb-4">Ingestion Execution Summary</h2>
+        
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="metric-box">
+                    <div class="metric-label">Discovered URLs</div>
+                    <div class="metric-value">{{ ingestion_results.total_discovered }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-box">
+                    <div class="metric-label">Successful</div>
+                    <div class="metric-value text-success">{{ ingestion_results.success_count }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-box">
+                    <div class="metric-label">Failed</div>
+                    <div class="metric-value text-danger">{{ ingestion_results.failed_count }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-box">
+                    <div class="metric-label">Pipeline Status</div>
+                    <div class="metric-value text-primary">Completed</div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="h6 text-muted uppercase mb-3">Harvested Document Log:</h3>
+        <div class="table-responsive">
+            <table class="saas-table">
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>HTTP</th>
+                        <th>Status</th>
+                        <th>Note / Error</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in ingestion_results.processed_docs %}
+                        <tr>
+                            <td><a href="{{ item.url }}" target="_blank" class="font-monospace body-text">{{ item.url }}</a></td>
+                            <td><span class="badge bg-light text-dark border px-2.5 py-1.5 font-monospace">{{ item.http_status|default:"-" }}</span></td>
+                            <td>
+                                {% if item.status == 'success' %}
+                                    <span class="badge-pill-success"><i class="fa-solid fa-circle-check"></i> Success</span>
+                                {% else %}
+                                    <span class="badge-pill-failed"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
+                                {% endif %}
+                            </td>
+                            <td class="body-text text-muted">{{ item.error_message|default:"Success" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

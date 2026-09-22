@@ -1,0 +1,37 @@
+# Python & Django environment files
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Local Environment & Secrets
+.env
+.env.local
+
+# Django Runtime files
+*.log
+app.log
+db.sqlite3
+media/uploads/
+
+# Vector Data & Indexes (regeneratable via python manage.py build_vector_index)
+vector_data/*.faiss
+vector_data/*.json
+data/chroma/
+
+# IDE & Editor configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Test & Coverage
+.pytest_cache/
+.coverage
+htmlcov/

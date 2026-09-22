@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ doc.title|default:"Document Detail" }} | Knowledge Base Hub{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="mb-5 pb-3 border-bottom" style="border-color: var(--border-main) !important;">
+    <a href="{% url 'documents_list' %}" class="btn btn-saas-secondary mb-3" style="min-height: 38px; padding: 0.4rem 1rem; font-size: 0.875rem;">
+        <i class="fa-solid fa-arrow-left me-1"></i> Back to Documents
+    </a>
+    
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+            <h1 class="page-title mb-1">{{ doc.title|default:"URL Document Detail" }}</h1>
+            <p class="body-text text-muted font-monospace mb-0">
+                <a href="{{ doc.url }}" target="_blank">{{ doc.url }}</a>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <form method="POST">
+                {% csrf_token %}
+                <button type="submit" name="reharvest" class="btn btn-saas-secondary">
+                    <i class="fa-solid fa-rotate me-1"></i> Re-harvest URL
+                </button>
+            </form>
+            <form method="POST" action="{% url 'delete_document' doc.id %}" onsubmit="return confirm('Are you sure you want to delete this URL document and its chunks?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-saas-danger">
+                    <i class="fa-solid fa-trash-can me-1"></i> Delete Document
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Header Metrics Grid -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="metric-box">
+            <div class="metric-label">Status</div>
+            <div class="mt-2">
+                {% if doc.status == 'success' %}
+                    <span class="badge-pill-success"><i class="fa-solid fa-circle-check"></i> Success</span>
+                {% elif doc.status == 'failed' %}
+                    <span class="badge-pill-failed"><i class="fa-solid fa-circle-xmark"></i> Failed</span>
+                {% else %}
+                    <span class="badge-pill-pending"><i class="fa-solid fa-spinner fa-spin"></i> Processing</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-box">
+            <div class="metric-label">HTTP Status</div>
+            <div class="metric-value">{{ doc.http_status|default:"N/A" }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-box">
+            <div class="metric-label">Total Chunks</div>
+            <div class="metric-value text-primary">{{ doc.chunks.count }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-box">
+            <div class="metric-label">Harvested Timestamp</div>
+            <div class="body-text fw-medium mt-1">{{ doc.scraped_at|date:"Y-m-d H:i:s" }}</div>
+        </div>
+    </div>
+</div>
+
+{% if doc.error_message %}
+    <div class="alert alert-danger saas-card border-danger mb-5 p-4">
+        <h3 class="card-heading text-danger mb-2">Harvest Error Log</h3>
+        <p class="mb-0 font-monospace text-danger body-text">{{ doc.error_message }}</p>
+    </div>
+{% endif %}
+
+<!-- Tabs Panel -->
+<div class="saas-card p-4 p-md-5">
+    <ul class="nav nav-tabs border-bottom mb-4" id="docTabs" role="tablist" style="border-color: var(--border-main) !important;">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="cleaned-tab" data-bs-toggle="tab" data-bs-target="#cleaned" type="button" role="tab">
+                Cleaned Text
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="chunks-tab" data-bs-toggle="tab" data-bs-target="#chunks" type="button" role="tab">
+                Text Chunks ({{ doc.chunks.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw" type="button" role="tab">
+                Raw HTML
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab">
+                Metadata JSON
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="docTabsContent">
+        <!-- Cleaned Text -->
+        <div class="tab-pane fade show active" id="cleaned" role="tabpanel">
+            {% if doc.cleaned_text %}
+                <div class="code-block body-text" style="max-height: 550px; overflow-y: auto; white-space: pre-wrap; font-family: 'Inter', sans-serif;">{{ doc.cleaned_text }}</div>
+            {% else %}
+                <p class="text-muted body-text mb-0">No cleaned text extracted.</p>
+            {% endif %}
+        </div>
+
+        <!-- Chunks -->
+        <div class="tab-pane fade" id="chunks" role="tabpanel">
+            {% if doc.chunks.all %}
+                <div class="row g-3">
+                    {% for chunk in doc.chunks.all %}
+                        <div class="col-12">
+                            <div class="p-4 bg-white rounded border" style="border-color: var(--border-main) !important;">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="badge bg-light text-primary border px-3 py-1.5 font-monospace fw-semibold fs-6">Chunk #{{ chunk.chunk_index }}</span>
+                                    <span class="badge bg-light text-muted border px-3 py-1.5 font-monospace fs-6">FAISS Embedding ID: {{ chunk.embedding_id|default:"Unindexed" }}</span>
+                                </div>
+                                <p class="mb-0 body-text">{{ chunk.content }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted body-text mb-0">No chunks generated.</p>
+            {% endif %}
+        </div>
+
+        <!-- Raw HTML -->
+        <div class="tab-pane fade" id="raw" role="tabpanel">
+            {% if doc.raw_html %}
+                <pre class="code-block" style="max-height: 550px; overflow-y: auto;"><code>{{ doc.raw_html }}</code></pre>
+            {% else %}
+                <p class="text-muted body-text mb-0">No raw HTML recorded.</p>
+            {% endif %}
+        </div>
+
+        <!-- Metadata -->
+        <div class="tab-pane fade" id="metadata" role="tabpanel">
+            <pre class="code-block"><code>{{ doc.metadata }}</code></pre>
+            <div class="mt-3 text-muted body-text">
+                <strong>Content Hash (SHA256):</strong> <code class="bg-light p-1 rounded">{{ doc.content_hash }}</code>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
