@@ -18,7 +18,7 @@ flowchart TD
     Embedder --> FAISS[(FAISS Vector Store)]
     FAISS --> Retriever[Semantic Vector Retriever]
     Retriever --> Prompt[Prompt Context Builder]
-    Prompt --> LLM[Google Gemini API / LLM]
+    Prompt --> LLM[Google Gemini API / gemini-3-flash-preview]
     LLM --> Response[Answer + Source URL Citations]
 ```
 
@@ -33,7 +33,7 @@ flowchart TD
 | **Web Scraping** | Requests, BeautifulSoup4, Pandas, OpenPyXL |
 | **Embeddings** | SentenceTransformers (`all-MiniLM-L6-v2`, 384d) |
 | **Vector Database** | FAISS CPU (`IndexFlatIP` with L2 Normalization) |
-| **LLM Provider** | Google Gemini API (`gemini-2.5-flash`) |
+| **LLM Provider** | Google Gemini API (`gemini-3-flash-preview`) |
 | **Frontend** | HTML5, CSS3, Vanilla JavaScript, Bootstrap 5 |
 
 ---
